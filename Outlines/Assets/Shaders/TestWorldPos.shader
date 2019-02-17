@@ -2,7 +2,7 @@
 	SubShader {
 		Pass {
 			HLSLPROGRAM
-				#include "LWRP/ShaderLibrary/Core.hlsl"
+				#include "Packages/com.unity.render-pipelines.lightweight/ShaderLibrary/Core.hlsl"
 
 				#pragma vertex vert
 				#pragma fragment frag

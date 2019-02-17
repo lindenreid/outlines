@@ -1,7 +1,7 @@
 #ifndef COLOR_SPREAD
 #define COLOR_SPREAD
 
-#include "PostProcessing/Shaders/StdLib.hlsl"
+#include "Packages/com.unity.postprocessing/PostProcessing/Shaders/StdLib.hlsl"
 
 // Depth texture
 TEXTURE2D_SAMPLER2D(_CameraDepthTexture, sampler_CameraDepthTexture);
