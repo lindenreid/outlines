@@ -83,8 +83,16 @@ float4 Frag(VertexOutput i) : SV_Target
     diff += CompareNeighbor(localDepth, i.screenPos, float2(0, 1));
     diff += CompareNeighbor(localDepth, i.screenPos, float2(0, -1));
 
+    /*
+    float j = 2;
+    diff += CompareNeighbor(localDepth, i.screenPos, float2(j, 0));
+    diff += CompareNeighbor(localDepth, i.screenPos, float2(-j, 0));
+    diff += CompareNeighbor(localDepth, i.screenPos, float2(0, j));
+    diff += CompareNeighbor(localDepth, i.screenPos, float2(0, -j));
+    */
+
     // create outline color
-    float3 outlineColor = _Color.rgb; //lerp(_Color.rgb, cam.rgb, 0.5);
+    float3 outlineColor = _Color.rgb * cam.rgb; //lerp(_Color.rgb, cam.rgb, 0.5);
 
     // translate difference into outlines with settings
     //diff *= localDepth * _DistanceMult;
