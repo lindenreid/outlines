@@ -52,8 +52,8 @@ float2 CompareNeighbor (float baseDepth, float3 baseNormal, float2 uv, float2 of
 
     // get difference between local normal and neighbor normal
     float3 nd = baseNormal - normalDepth.xyz;
-    nd = nd.x + nd.y + nd.z;
-    normalAndDepthDifference.y = nd;
+    float d = nd.x + nd.y + nd.z;
+    normalAndDepthDifference.y = d.x;
 
     return normalAndDepthDifference;
 }
@@ -93,16 +93,16 @@ float4 Frag(VertexOutput i) : SV_Target
     //diff *= localDepth * _DistanceMult;
     diff.x *= _DepthSensitivity;
     diff.y *= _NormalSensitivity;
-    
-    //diff = saturate(diff);
-    float outline = diff.x + diff.y;
-    outline = saturate(outline);
 
     // apply noise for random breaks in outline
     float2 noiseUV = i.screenPos * _NoiseScale;
     float noise = SAMPLE_TEXTURE2D(_NoiseTex, sampler_NoiseTex, noiseUV).r;
-    noise = noise > 0.4;
-    outline -= noise;
+    noise = noise > 0.2;
+    diff.y -= noise;
+    diff.y = saturate(diff.y);
+    
+    //diff = saturate(diff);
+    float outline = diff.x + diff.y;
     outline = saturate(outline);
 
     // get outline color

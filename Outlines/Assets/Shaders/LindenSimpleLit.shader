@@ -55,6 +55,15 @@ Shader "Custom/Simple Lit"
             ZWrite[_ZWrite]
             Cull[_Cull]
 
+            // write to stencil buffer so outline pass can read
+            Stencil
+			{
+				Ref 4
+				Comp always
+				Pass replace
+				ZFail keep
+            }
+
             HLSLPROGRAM
             // Required to compile gles 2.0 with standard srp library
             #pragma prefer_hlslcc gles
@@ -91,11 +100,51 @@ Shader "Custom/Simple Lit"
             #pragma multi_compile_instancing
 
             #pragma vertex LitPassVertexSimple
-            #pragma fragment LitPassFragmentSimple
+            #pragma fragment ColorOnlyFrag
             #define BUMP_SCALE_NOT_SUPPORTED 1
 
             #include "Packages/com.unity.render-pipelines.lightweight/Shaders/SimpleLitInput.hlsl"
             #include "Packages/com.unity.render-pipelines.lightweight/Shaders/SimpleLitForwardPass.hlsl"
+            
+            half4 ColorOnlyFrag(Varyings input) : SV_TARGET
+            {
+                return float4(_Color.rgb, 1);
+            }
+
+            ENDHLSL
+        }
+
+        Pass {
+            Name "Outlines"
+            //Tags { "LightMode" = "LightweightForward" }
+
+            Blend One Zero
+            ZWrite On
+            ZTest Always
+            Cull Front
+
+            Stencil {
+                Ref 4
+                Comp notequal 
+                Fail keep 
+                Pass replace
+            }
+
+            HLSLPROGRAM
+            // Required to compile gles 2.0 with standard srp library
+            #pragma prefer_hlslcc gles
+            #pragma exclude_renderers d3d11_9x
+            #pragma target 2.0
+
+            //--------------------------------------
+            // GPU Instancing
+            #pragma multi_compile_instancing
+
+            #pragma vertex HaloVertex
+            #pragma fragment HaloFrag
+
+            #include "Halo.hlsl"
+
             ENDHLSL
         }
 
