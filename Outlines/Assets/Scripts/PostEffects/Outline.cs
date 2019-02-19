@@ -8,7 +8,8 @@ namespace Linden.Rendering {
     public sealed class Outline : PostProcessEffectSettings
     {
         public FloatParameter size = new FloatParameter { value = 1.0f };
-        public FloatParameter sensitivity = new FloatParameter { value = 1.0f };
+        public FloatParameter depthSensitivity = new FloatParameter { value = 1.0f };
+        public FloatParameter normalSensitivity = new FloatParameter { value = 1.0f };
         public FloatParameter distance = new FloatParameter { value = 1.0f };
         public ColorParameter color = new ColorParameter { value = Color.white };
     }
@@ -22,7 +23,8 @@ namespace Linden.Rendering {
             var sheet = context.propertySheets.Get(Shader.Find("Custom/Outline"));
 
             sheet.properties.SetFloat("_MaxSize", settings.size);
-            sheet.properties.SetFloat("_Sensitivity", settings.sensitivity);
+            sheet.properties.SetFloat("_DepthSensitivity", settings.depthSensitivity);
+            sheet.properties.SetFloat("_NormalSensitivity", settings.normalSensitivity);
             sheet.properties.SetFloat("_DistanceMult", settings.distance);
             sheet.properties.SetColor("_Color", settings.color);
             sheet.properties.SetMatrix("unity_ViewToWorldMatrix", context.camera.cameraToWorldMatrix);

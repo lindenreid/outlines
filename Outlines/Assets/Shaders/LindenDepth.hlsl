@@ -32,8 +32,10 @@ Varyings LindenDepthVertex(Attributes input)
     return output;
 }
 
-half4 LindenDepthFragment(Varyings input) : SV_TARGET
+float4 LindenDepthFragment(Varyings input) : SV_TARGET
 {
-    return half4(input.normalWS.xyz, 1.0);
+    float3 normal = input.normalWS;
+    float depth = input.positionCS.z;
+    return float4(normal.xyz, depth);
 }
 #endif

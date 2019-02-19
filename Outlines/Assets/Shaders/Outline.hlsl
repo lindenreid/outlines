@@ -10,7 +10,8 @@ float4 _LindenDepthTexture_TexelSize;
 TEXTURE2D_SAMPLER2D(_MainTex, sampler_MainTex);
 // Material properties
 float _Size;
-float _Sensitivity;
+float _DepthSensitivity;
+float _NormalSensitivity;
 float _DistanceMult;
 float4 _Color;
 // Unity properties (set in Outline.cs)
@@ -26,8 +27,9 @@ struct VertexOutput {
     float2 screenPos : TEXCOORD0;
 };
 
-float GetDepth (float2 uv) {
-    return SAMPLE_DEPTH_TEXTURE(_LindenDepthTexture, sampler_LindenDepthTexture, uv).r;
+float4 GetDepthAndNormal (float2 uv) {
+    float4 dn = SAMPLE_TEXTURE2D(_LindenDepthTexture, sampler_LindenDepthTexture, uv);
+    return dn;
 }
 
 float3 GetWorldFromViewPosition (VertexOutput i, float z) {
@@ -44,13 +46,26 @@ float3 GetWorldFromViewPosition (VertexOutput i, float z) {
     //return float3(z, z, z); // TEST
 }
 
-float CompareNeighbor (float baseDepth, float2 uv, float2 offset) {
+// x = depth difference
+// y = normal difference
+float2 CompareNeighbor (float baseDepth, float3 baseNormal, float2 uv, float2 offset) {
+    float2 normalAndDepthDifference = float2(0,0);
+
     // multiply offset by texture size
     uv += _LindenDepthTexture_TexelSize.xy * offset;
+
     // sample neighboring pixel
-    float z = GetDepth(uv);
+    float4 normalDepth = GetDepthAndNormal(uv);
+
     // get difference in depth between local and neighbor depth
-    return baseDepth - z;
+    normalAndDepthDifference.x = baseDepth - normalDepth.w;
+
+    // get difference between local normal and neighbor normal
+    float3 nd = baseNormal - normalDepth.xyz;
+    nd = nd.x + nd.y + nd.z;
+    normalAndDepthDifference.y = nd;
+
+    return normalAndDepthDifference;
 }
 
 VertexOutput Vertex(VertexInput i) {
@@ -68,7 +83,9 @@ VertexOutput Vertex(VertexInput i) {
 
 float4 Frag(VertexOutput i) : SV_Target
 {
-    float localDepth = GetDepth(i.screenPos);
+    float4 localdn = GetDepthAndNormal(i.screenPos);
+    float localDepth = localdn.a;
+    float3 localNormal = localdn.rgb;
     //float3 worldPos = GetWorldFromViewPosition(i, localDepth);
 
     // camera texture
@@ -78,34 +95,32 @@ float4 Frag(VertexOutput i) : SV_Target
     //Light light = GetMainLight();
 
     // get difference between local pixel depth & neighboring pixel depths
-    float diff = CompareNeighbor(localDepth, i.screenPos, float2(1, 0));
-    diff += CompareNeighbor(localDepth, i.screenPos, float2(-1, 0));
-    diff += CompareNeighbor(localDepth, i.screenPos, float2(0, 1));
-    diff += CompareNeighbor(localDepth, i.screenPos, float2(0, -1));
-
-    /*
-    float j = 2;
-    diff += CompareNeighbor(localDepth, i.screenPos, float2(j, 0));
-    diff += CompareNeighbor(localDepth, i.screenPos, float2(-j, 0));
-    diff += CompareNeighbor(localDepth, i.screenPos, float2(0, j));
-    diff += CompareNeighbor(localDepth, i.screenPos, float2(0, -j));
-    */
+    float2 diff = CompareNeighbor(localDepth, localNormal, i.screenPos, float2(1, 0));
+    diff += CompareNeighbor(localDepth, localNormal, i.screenPos, float2(-1, 0));
+    diff += CompareNeighbor(localDepth, localNormal, i.screenPos, float2(0, 1));
+    diff += CompareNeighbor(localDepth, localNormal, i.screenPos, float2(0, -1));
 
     // create outline color
     float3 outlineColor = _Color.rgb * cam.rgb; //lerp(_Color.rgb, cam.rgb, 0.5);
 
     // translate difference into outlines with settings
     //diff *= localDepth * _DistanceMult;
-    diff *= _Sensitivity;
-    diff = saturate(diff);
+    diff.x *= _DepthSensitivity;
+    diff.y *= _NormalSensitivity;
+    
+    //diff = saturate(diff);
+    float outline = diff.x + diff.y;
+    outline = saturate(outline);
 
     // apply to camera color
-    float3 color = lerp(cam.rgb, outlineColor, diff);
+    float3 color = lerp(cam.rgb, outlineColor, outline);
 
     return float4(color, 1.0);
-    //return float4(cam.rgb, 1.0); // TEST
-    //return float4(localDepth.xxx, 1.0); // TEST
-    //return float4(diff.xxx, 1.0);
+    //return float4(cam.rgb, 1.0); // test plain camera tex
+    //return float4(localDepth.xxx, 1.0); // test local depth vals
+    //return float4(diff.xxx, 1.0); // test depth difference vals
+    //return float4(localNormal.rgb, 1.0); // test local normal vals
+    //return float4(diff.yyy, 1.0); // test normal difference vals
 }
 
 #endif
