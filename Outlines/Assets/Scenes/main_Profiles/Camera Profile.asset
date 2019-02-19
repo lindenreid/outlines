@@ -1657,7 +1657,7 @@ MonoBehaviour:
     value: 1
   depthSensitivity:
     overrideState: 1
-    value: 1000
+    value: 3000
   normalSensitivity:
     overrideState: 1
     value: 0.52
@@ -1666,4 +1666,11 @@ MonoBehaviour:
     value: 9.9
   color:
     overrideState: 1
-    value: {r: 0.42933273, g: 0.41202384, b: 0.4433962, a: 1}
+    value: {r: 0.509434, g: 0.509434, b: 0.509434, a: 1}
+  noiseTex:
+    overrideState: 1
+    value: {fileID: 2800000, guid: f56fd4d77ddc7f64bbcadd0761ce00c3, type: 3}
+    defaultState: 1
+  noiseScale:
+    overrideState: 1
+    value: 0.2

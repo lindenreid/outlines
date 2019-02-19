@@ -12,6 +12,8 @@ namespace Linden.Rendering {
         public FloatParameter normalSensitivity = new FloatParameter { value = 1.0f };
         public FloatParameter distance = new FloatParameter { value = 1.0f };
         public ColorParameter color = new ColorParameter { value = Color.white };
+        public TextureParameter noiseTex = new TextureParameter { value = null };
+        public FloatParameter noiseScale = new FloatParameter { value = 1.0f };
     }
     
     public sealed class OutlineRenderer : PostProcessEffectRenderer<Outline>
@@ -29,6 +31,8 @@ namespace Linden.Rendering {
             sheet.properties.SetColor("_Color", settings.color);
             sheet.properties.SetMatrix("unity_ViewToWorldMatrix", context.camera.cameraToWorldMatrix);
             sheet.properties.SetMatrix("unity_InverseProjectionMatrix", projectionMatrix.inverse);
+            sheet.properties.SetTexture("_NoiseTex", settings.noiseTex);
+            sheet.properties.SetFloat("_NoiseScale", settings.noiseScale);
         
             context.command.BlitFullscreenTriangle(context.source, context.destination, sheet, 0);
         }

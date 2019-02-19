@@ -1,19 +1,23 @@
 #ifndef COLOR_SPREAD
 #define COLOR_SPREAD
 
-#include "Packages/com.unity.postprocessing/PostProcessing/Shaders/StdLib.hlsl"
+//#include "Packages/com.unity.postprocessing/PostProcessing/Shaders/StdLib.hlsl"
+#include "Packages/com.unity.render-pipelines.lightweight/ShaderLibrary/Core.hlsl"
 
 // Depth texture
-TEXTURE2D_SAMPLER2D(_LindenDepthTexture, sampler_LindenDepthTexture);
+TEXTURE2D(_LindenDepthTexture); SAMPLER(sampler_LindenDepthTexture);
 float4 _LindenDepthTexture_TexelSize;
 // Camera texture 
-TEXTURE2D_SAMPLER2D(_MainTex, sampler_MainTex);
+TEXTURE2D(_MainTex); SAMPLER(sampler_MainTex);
+// noise tex
+TEXTURE2D(_NoiseTex); SAMPLER(sampler_NoiseTex);
 // Material properties
 float _Size;
 float _DepthSensitivity;
 float _NormalSensitivity;
 float _DistanceMult;
 float4 _Color;
+float _NoiseScale;
 // Unity properties (set in Outline.cs)
 float4x4 unity_ViewToWorldMatrix;
 float4x4 unity_InverseProjectionMatrix;
@@ -30,20 +34,6 @@ struct VertexOutput {
 float4 GetDepthAndNormal (float2 uv) {
     float4 dn = SAMPLE_TEXTURE2D(_LindenDepthTexture, sampler_LindenDepthTexture, uv);
     return dn;
-}
-
-float3 GetWorldFromViewPosition (VertexOutput i, float z) {
-    // get view space position
-    // thank you to the built-in pp screenSpaceReflections effect for this code lel
-    float4 result = mul(unity_InverseProjectionMatrix, float4(2.0 * i.screenPos - 1.0, z, 1.0));
-    float3 viewPos = result.xyz / result.w;
-
-    // get ws position
-    float3 worldPos = mul(unity_ViewToWorldMatrix, float4(viewPos, 1.0));
-
-    return worldPos;
-    //return viewPos; // TEST
-    //return float3(z, z, z); // TEST
 }
 
 // x = depth difference
@@ -73,7 +63,7 @@ VertexOutput Vertex(VertexInput i) {
     o.pos = float4(i.vertex.xy, 0.0, 1.0);
     
     // get clip space coordinates for sampling camera tex
-    o.screenPos = TransformTriangleVertexToUV(i.vertex.xy);
+    o.screenPos = (i.vertex.xy + 1.0) * 0.5;
 #if UNITY_UV_STARTS_AT_TOP
     o.screenPos = o.screenPos * float2(1.0, -1.0) + float2(0.0, 1.0);
 #endif
@@ -86,7 +76,6 @@ float4 Frag(VertexOutput i) : SV_Target
     float4 localdn = GetDepthAndNormal(i.screenPos);
     float localDepth = localdn.a;
     float3 localNormal = localdn.rgb;
-    //float3 worldPos = GetWorldFromViewPosition(i, localDepth);
 
     // camera texture
     float4 cam = SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, i.screenPos);
@@ -100,9 +89,6 @@ float4 Frag(VertexOutput i) : SV_Target
     diff += CompareNeighbor(localDepth, localNormal, i.screenPos, float2(0, 1));
     diff += CompareNeighbor(localDepth, localNormal, i.screenPos, float2(0, -1));
 
-    // create outline color
-    float3 outlineColor = _Color.rgb * cam.rgb; //lerp(_Color.rgb, cam.rgb, 0.5);
-
     // translate difference into outlines with settings
     //diff *= localDepth * _DistanceMult;
     diff.x *= _DepthSensitivity;
@@ -112,10 +98,24 @@ float4 Frag(VertexOutput i) : SV_Target
     float outline = diff.x + diff.y;
     outline = saturate(outline);
 
+    // apply noise for random breaks in outline
+    float2 noiseUV = i.screenPos * _NoiseScale;
+    float noise = SAMPLE_TEXTURE2D(_NoiseTex, sampler_NoiseTex, noiseUV).r;
+    noise = noise > 0.4;
+    outline -= noise;
+    outline = saturate(outline);
+
+    // get outline color
+    float3 outlineColor = _Color.rgb*cam.rgb; //_Color.rgb * cam.rgb; //lerp(_Color.rgb, cam.rgb, 0.5);
+    
+    //half fogFactor = ComputeFogFactor(localDepth);
+    //outlineColor = MixFog(outlineColor, fogFactor); //??? not working
+
     // apply to camera color
-    float3 color = lerp(cam.rgb, outlineColor, outline);
+    float3 color = cam.rgb*(1-outline) + outlineColor*outline; //lerp(cam.rgb, outlineColor, outline);
 
     return float4(color, 1.0);
+    //return float4(fogFactor.xxx, 1.0);
     //return float4(cam.rgb, 1.0); // test plain camera tex
     //return float4(localDepth.xxx, 1.0); // test local depth vals
     //return float4(diff.xxx, 1.0); // test depth difference vals
