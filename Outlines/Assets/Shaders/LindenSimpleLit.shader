@@ -133,11 +133,11 @@ Shader "Custom/Simple Lit"
 
         Pass
         {
-            Name "DepthOnly"
-            Tags{"LightMode" = "DepthOnly"}
+            Name "LindenDepth"
+            Tags {"LightMode" = "LindenDepth"}
 
             ZWrite On
-            ColorMask 0
+            ZTest LEqual
             Cull[_Cull]
 
             HLSLPROGRAM
@@ -146,8 +146,8 @@ Shader "Custom/Simple Lit"
             #pragma exclude_renderers d3d11_9x
             #pragma target 2.0
 
-            #pragma vertex DepthOnlyVertex
-            #pragma fragment DepthOnlyFragment
+            #pragma vertex LindenDepthVertex
+            #pragma fragment LindenDepthFragment
 
             // -------------------------------------
             // Material Keywords
@@ -159,7 +159,7 @@ Shader "Custom/Simple Lit"
             #pragma multi_compile_instancing
 
             #include "Packages/com.unity.render-pipelines.lightweight/Shaders/SimpleLitInput.hlsl"
-            #include "Packages/com.unity.render-pipelines.lightweight/Shaders/DepthOnlyPass.hlsl"
+            #include "LindenDepth.hlsl"
             ENDHLSL
         }
 

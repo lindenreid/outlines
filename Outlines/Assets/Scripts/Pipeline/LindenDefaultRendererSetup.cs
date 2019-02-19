@@ -5,7 +5,8 @@ namespace UnityEngine.Experimental.Rendering.LightweightPipeline
 {
     internal class LindenDefaultRendererSetup : IRendererSetup
     {
-        private LindenDepthOnlyPass m_DepthOnlyPass;
+        //private LindenDepthOnlyPass m_DepthOnlyPass;
+        private LindenDepthPass m_LindenDepthPass;
         private MainLightShadowCasterPass m_MainLightShadowCasterPass;
         private AdditionalLightsShadowCasterPass m_AdditionalLightsShadowCasterPass;
         private SetupForwardRenderingPass m_SetupForwardRenderingPass;
@@ -16,7 +17,7 @@ namespace UnityEngine.Experimental.Rendering.LightweightPipeline
         private RenderOpaqueForwardPass m_RenderOpaqueForwardPass;
         private OpaquePostProcessPass m_OpaquePostProcessPass;
         private DrawSkyboxPass m_DrawSkyboxPass;
-        private CopyDepthPass m_CopyDepthPass;
+        //private CopyDepthPass m_CopyDepthPass;
         private CopyColorPass m_CopyColorPass;
         private RenderTransparentForwardPass m_RenderTransparentForwardPass;
         private TransparentPostProcessPass m_TransparentPostProcessPass;
@@ -44,7 +45,8 @@ namespace UnityEngine.Experimental.Rendering.LightweightPipeline
             if (m_Initialized)
                 return;
 
-            m_DepthOnlyPass = new LindenDepthOnlyPass();
+            //m_DepthOnlyPass = new LindenDepthOnlyPass();
+            m_LindenDepthPass = new LindenDepthPass();
             m_MainLightShadowCasterPass = new MainLightShadowCasterPass();
             m_AdditionalLightsShadowCasterPass = new AdditionalLightsShadowCasterPass();
             m_SetupForwardRenderingPass = new SetupForwardRenderingPass();
@@ -55,7 +57,7 @@ namespace UnityEngine.Experimental.Rendering.LightweightPipeline
             m_RenderOpaqueForwardPass = new RenderOpaqueForwardPass();
             m_OpaquePostProcessPass = new OpaquePostProcessPass();
             m_DrawSkyboxPass = new DrawSkyboxPass();
-            m_CopyDepthPass = new CopyDepthPass();
+            //m_CopyDepthPass = new CopyDepthPass();
             m_CopyColorPass = new CopyColorPass();
             m_RenderTransparentForwardPass = new RenderTransparentForwardPass();
             m_TransparentPostProcessPass = new TransparentPostProcessPass();
@@ -114,13 +116,29 @@ namespace UnityEngine.Experimental.Rendering.LightweightPipeline
 
             renderer.EnqueuePass(m_SetupForwardRenderingPass);
 
-            if (requiresDepthPrepass)
+            /*if (requiresDepthPrepass)
             {
                 m_DepthOnlyPass.Setup(baseDescriptor, DepthTexture, SampleCount.One);
                 renderer.EnqueuePass(m_DepthOnlyPass);
 
                 foreach (var pass in camera.GetComponents<IAfterDepthPrePass>())
                     renderer.EnqueuePass(pass.GetPassToEnqueue(m_DepthOnlyPass.descriptor, DepthTexture));
+            }*/
+
+            // LINDEN DEPTH PASS
+            if (true)
+            {
+                RenderTargetHandle lindenDepthHandle = RenderTargetHandle.CameraTarget;
+                m_LindenDepthPass.Setup(
+                    baseDescriptor,
+                    lindenDepthHandle,
+                    ScriptableRenderer.GetCameraClearFlag(camera),
+                    camera.backgroundColor
+                );
+                renderer.EnqueuePass(m_LindenDepthPass);
+                
+                foreach (var pass in camera.GetComponents<IAfterDepthPrePass>())
+                    renderer.EnqueuePass(pass.GetPassToEnqueue(m_LindenDepthPass.descriptor, DepthTexture));
             }
 
             if (resolveShadowsInScreenSpace)
@@ -176,11 +194,11 @@ namespace UnityEngine.Experimental.Rendering.LightweightPipeline
             foreach (var pass in camera.GetComponents<IAfterSkyboxPass>())
                 renderer.EnqueuePass(pass.GetPassToEnqueue(baseDescriptor, colorHandle, depthHandle));
 
-            if (renderingData.cameraData.requiresDepthTexture && !requiresDepthPrepass)
+            /*if (renderingData.cameraData.requiresDepthTexture && !requiresDepthPrepass)
             {
                 m_CopyDepthPass.Setup(depthHandle, DepthTexture);
                 renderer.EnqueuePass(m_CopyDepthPass);
-            }
+            }*/
 
             if (renderingData.cameraData.requiresOpaqueTexture)
             {
