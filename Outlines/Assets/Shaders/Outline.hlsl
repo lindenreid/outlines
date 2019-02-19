@@ -4,8 +4,8 @@
 #include "Packages/com.unity.postprocessing/PostProcessing/Shaders/StdLib.hlsl"
 
 // Depth texture
-TEXTURE2D_SAMPLER2D(_CameraDepthTexture, sampler_CameraDepthTexture);
-float4 _CameraDepthTexture_TexelSize;
+TEXTURE2D_SAMPLER2D(_LindenDepthTexture, sampler_LindenDepthTexture);
+float4 _LindenDepthTexture_TexelSize;
 // Camera texture 
 TEXTURE2D_SAMPLER2D(_MainTex, sampler_MainTex);
 // Material properties
@@ -27,7 +27,7 @@ struct VertexOutput {
 };
 
 float GetDepth (float2 uv) {
-    return SAMPLE_DEPTH_TEXTURE(_CameraDepthTexture, sampler_CameraDepthTexture, uv).r;
+    return SAMPLE_DEPTH_TEXTURE(_LindenDepthTexture, sampler_LindenDepthTexture, uv).r;
 }
 
 float3 GetWorldFromViewPosition (VertexOutput i, float z) {
@@ -46,7 +46,7 @@ float3 GetWorldFromViewPosition (VertexOutput i, float z) {
 
 float CompareNeighbor (float baseDepth, float2 uv, float2 offset) {
     // multiply offset by texture size
-    uv += _CameraDepthTexture_TexelSize.xy * offset;
+    uv += _LindenDepthTexture_TexelSize.xy * offset;
     // sample neighboring pixel
     float z = GetDepth(uv);
     // get difference in depth between local and neighbor depth

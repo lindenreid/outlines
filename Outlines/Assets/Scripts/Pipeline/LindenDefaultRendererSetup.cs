@@ -72,7 +72,7 @@ namespace UnityEngine.Experimental.Rendering.LightweightPipeline
             // Samples (MSAA) depend on camera and pipeline
             ColorAttachment.Init("_CameraColorTexture");
             DepthAttachment.Init("_CameraDepthAttachment");
-            DepthTexture.Init("_CameraDepthTexture");
+            DepthTexture.Init("_LindenDepthTexture");
             OpaqueColor.Init("_CameraOpaqueTexture");
             MainLightShadowmap.Init("_MainLightShadowmapTexture");
             AdditionalLightsShadowmap.Init("_AdditionalLightsShadowmapTexture");
@@ -128,17 +128,8 @@ namespace UnityEngine.Experimental.Rendering.LightweightPipeline
             // LINDEN DEPTH PASS
             if (true)
             {
-                RenderTargetHandle lindenDepthHandle = RenderTargetHandle.CameraTarget;
-                m_LindenDepthPass.Setup(
-                    baseDescriptor,
-                    lindenDepthHandle,
-                    ScriptableRenderer.GetCameraClearFlag(camera),
-                    camera.backgroundColor
-                );
+                m_LindenDepthPass.Setup(baseDescriptor, DepthTexture);
                 renderer.EnqueuePass(m_LindenDepthPass);
-                
-                foreach (var pass in camera.GetComponents<IAfterDepthPrePass>())
-                    renderer.EnqueuePass(pass.GetPassToEnqueue(m_LindenDepthPass.descriptor, DepthTexture));
             }
 
             if (resolveShadowsInScreenSpace)
@@ -231,13 +222,13 @@ namespace UnityEngine.Experimental.Rendering.LightweightPipeline
                 renderer.EnqueuePass(m_EndXrRenderingPass);
             }
 
-#if UNITY_EDITOR
+/*#if UNITY_EDITOR
             if (renderingData.cameraData.isSceneViewCamera)
             {
                 m_SceneViewDepthCopyPass.Setup(DepthTexture);
                 renderer.EnqueuePass(m_SceneViewDepthCopyPass);
             }
-#endif
+#endif*/
         }
 
         bool CanCopyDepth(ref CameraData cameraData)

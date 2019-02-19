@@ -8,13 +8,13 @@ namespace UnityEngine.Experimental.Rendering.LightweightPipeline
     /// </summary>
     public class LindenDepthPass : ScriptableRenderPass
     {
-        const string k_RenderLindenDepthTag = "Render Depth";
+        const string k_RenderLindenDepthTag = "Linden Depth Pass";
         FilterRenderersSettings m_OpaqueFilterSettings;
+
+        int kDepthBufferBits = 32;
 
         RenderTargetHandle colorAttachmentHandle { get; set; }
         public RenderTextureDescriptor descriptor { get; set; }
-        ClearFlag clearFlag { get; set; }
-        Color clearColor { get; set; }
 
         public LindenDepthPass()
         {
@@ -31,18 +31,14 @@ namespace UnityEngine.Experimental.Rendering.LightweightPipeline
         /// </summary>
         /// <param name="baseDescriptor">Current target descriptor</param>
         /// <param name="colorAttachmentHandle">Color attachment to render into</param>
-        /// <param name="clearFlag">Camera clear flag</param>
-        /// <param name="clearColor">Camera clear color</param>
         public void Setup(
             RenderTextureDescriptor baseDescriptor,
-            RenderTargetHandle colorAttachmentHandle,
-            ClearFlag clearFlag,
-            Color clearColor
+            RenderTargetHandle colorAttachmentHandle
         )
         {
             this.colorAttachmentHandle = colorAttachmentHandle;
-            this.clearColor = CoreUtils.ConvertSRGBToActiveColorSpace(clearColor);
-            this.clearFlag = clearFlag;
+            baseDescriptor.colorFormat = RenderTextureFormat.ARGBFloat;
+            baseDescriptor.depthBufferBits = kDepthBufferBits;
             descriptor = baseDescriptor;
         }
 
@@ -55,40 +51,40 @@ namespace UnityEngine.Experimental.Rendering.LightweightPipeline
             CommandBuffer cmd = CommandBufferPool.Get(k_RenderLindenDepthTag);
             using (new ProfilingSample(cmd, k_RenderLindenDepthTag))
             {
-                // When ClearFlag.None that means this is not the first render pass to write to camera target.
-                // In that case we set loadOp for both color and depth as RenderBufferLoadAction.Load
-                RenderBufferLoadAction loadOp = clearFlag != ClearFlag.None ? RenderBufferLoadAction.DontCare : RenderBufferLoadAction.Load;
-                RenderBufferStoreAction storeOp = RenderBufferStoreAction.Store;
-
+                cmd.GetTemporaryRT(colorAttachmentHandle.id, descriptor, FilterMode.Point);
                 SetRenderTarget(
                     cmd:cmd,
                     colorAttachment:colorAttachmentHandle.Identifier(),
-                    colorLoadAction:loadOp,
-                    colorStoreAction:storeOp,
-                    clearFlags:clearFlag,
-                    clearColor:clearColor,
+                    colorLoadAction:RenderBufferLoadAction.DontCare,
+                    colorStoreAction:RenderBufferStoreAction.Store,
+                    clearFlags:ClearFlag.All,
+                    clearColor:Color.black,
                     dimension:descriptor.dimension
                 );
 
-                // TODO: We need a proper way to handle multiple camera/ camera stack. Issue is: multiple cameras can share a same RT
-                // (e.g, split screen games). However devs have to be dilligent with it and know when to clear/preserve color.
-                // For now we make it consistent by resolving viewport with a RT until we can have a proper camera management system
-                //if (colorAttachmentHandle == -1 && !cameraData.isDefaultViewport)
-                //    cmd.SetViewport(camera.pixelRect);
                 context.ExecuteCommandBuffer(cmd);
                 cmd.Clear();
 
                 Camera camera = renderingData.cameraData.camera;
-                XRUtils.DrawOcclusionMesh(cmd, camera, renderingData.cameraData.isStereoEnabled);
                 var sortFlags = renderingData.cameraData.defaultOpaqueSortFlags;
                 var drawSettings = CreateDrawRendererSettings(camera, sortFlags, RendererConfiguration.None, renderingData.supportsDynamicBatching);
                 context.DrawRenderers(renderingData.cullResults.visibleRenderers, ref drawSettings, m_OpaqueFilterSettings);
-
-                // Render objects that did not match any shader pass with error shader
-                renderer.RenderObjectsWithError(context, ref renderingData.cullResults, camera, m_OpaqueFilterSettings, SortFlags.None);
             }
             context.ExecuteCommandBuffer(cmd);
             CommandBufferPool.Release(cmd);
+        }
+
+        /// <inheritdoc/>
+        public override void FrameCleanup(CommandBuffer cmd)
+        {
+            if (cmd == null)
+                throw new ArgumentNullException("cmd");
+            
+            if (colorAttachmentHandle != RenderTargetHandle.CameraTarget)
+            {
+                cmd.ReleaseTemporaryRT(colorAttachmentHandle.id);
+                colorAttachmentHandle = RenderTargetHandle.CameraTarget;
+            }
         }
     }
 }

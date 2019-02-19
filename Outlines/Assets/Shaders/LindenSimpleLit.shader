@@ -104,8 +104,8 @@ Shader "Custom/Simple Lit"
             Name "ShadowCaster"
             Tags{"LightMode" = "ShadowCaster"}
 
-            ZWrite On
-            ZTest LEqual
+            Blend One Zero
+            ZWrite[_ZWrite]
             Cull[_Cull]
 
             HLSLPROGRAM
@@ -137,7 +137,6 @@ Shader "Custom/Simple Lit"
             Tags {"LightMode" = "LindenDepth"}
 
             ZWrite On
-            ZTest LEqual
             Cull[_Cull]
 
             HLSLPROGRAM
@@ -148,11 +147,6 @@ Shader "Custom/Simple Lit"
 
             #pragma vertex LindenDepthVertex
             #pragma fragment LindenDepthFragment
-
-            // -------------------------------------
-            // Material Keywords
-            #pragma shader_feature _ALPHATEST_ON
-            #pragma shader_feature _GLOSSINESS_FROM_BASE_ALPHA
 
             //--------------------------------------
             // GPU Instancing
